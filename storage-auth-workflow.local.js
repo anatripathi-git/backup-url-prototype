@@ -1,19 +1,36 @@
 (() => {
   const catalog = {
     sqlprodbackup01: [
-      { container: 'manual', access: true },
-      { container: 'scheduled', access: true },
-      { container: 'restricted', access: false }
+      { container: 'manual', access: true, lifecycleDays: null, softDeleteDays: 7, immutabilityDays: null },
+      { container: 'scheduled', access: true, lifecycleDays: 30, softDeleteDays: 7, immutabilityDays: null },
+      { container: 'restricted', access: false, lifecycleDays: 5, softDeleteDays: 7, immutabilityDays: null }
     ],
     sqlmigrationwest: [
-      { container: 'migration', access: true },
-      { container: 'archive', access: true }
+      { container: 'migration', access: true, lifecycleDays: 14, softDeleteDays: 14, immutabilityDays: null },
+      { container: 'archive', access: true, lifecycleDays: 365, softDeleteDays: 30, immutabilityDays: 90 }
     ]
   };
+  const accountMetadata = {
+    sqlprodbackup01: { subscription: 'Production subscription', subscriptionId: '11111111-1111-1111-1111-111111111111', resourceGroup: 'rg-sql-production' },
+    sqlsharedbackup02: { subscription: 'Production subscription', subscriptionId: '11111111-1111-1111-1111-111111111111', resourceGroup: 'rg-shared-backup' },
+    sqlmigrationwest: { subscription: 'Migration subscription', subscriptionId: '22222222-2222-2222-2222-222222222222', resourceGroup: 'rg-data-migration' }
+  };
+  catalog.sqlsharedbackup02 = [
+    { container: 'database-backups', access: true, lifecycleDays: 90, softDeleteDays: 14, immutabilityDays: null }
+  ];
   const query = new URLSearchParams(window.location.search);
   const primaryIdentityReady = query.get('primaryIdentity') !== 'missing';
   const validationState = query.get('state') || 'ready';
+  const managedIdentitySupported = validationState !== 'version';
+  const storageContributorReady = query.get('storageContributor') !== 'missing';
+  const licenseType = query.get('license');
+  const licenseEligible = !licenseType || ['payg', 'paid'].includes(licenseType.toLowerCase());
   const principal = document.querySelector('#picker-role-scope')?.closest('dl')?.querySelector('dd')?.textContent?.trim() || 'SQL Server resource';
+  const managedIdentitySettingsUrl = 'https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceEntraSettingsBlade';
+  const changeLicenseTypeUrl = 'https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceOverviewBlade';
+  const storageIamUrl = 'https://portal.azure.com/#view/Microsoft_Azure_Storage/StorageMenuBlade/~/accessControl';
+  const lifecycleLearnUrl = 'https://learn.microsoft.com/azure/storage/blobs/lifecycle-management-overview';
+  const storageAccountsBlade = 'https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Storage%2FStorageAccounts';
 
   const flows = [];
   if (document.getElementById('select-backup-container')) {
@@ -25,8 +42,6 @@
       triggerId: 'select-policy-container',
       key: instancePolicy ? 'instance-policy' : 'database-policy',
       actionId: instancePolicy ? 'apply-policy' : 'apply',
-      reviewDestinationId: instancePolicy ? 'policy-review-destination' : 'review-destination',
-      reviewAuthenticationId: instancePolicy ? 'policy-review-authentication' : 'review-authentication',
       defaultContainer: 'scheduled',
       policy: true
     });
@@ -38,25 +53,42 @@
     return element.innerHTML;
   }
 
+  function containerIamUrl(accountName, containerName) {
+    const metadata = accountMetadata[accountName];
+    if (!metadata || !containerName) return storageIamUrl;
+    const resourceId = `/subscriptions/${metadata.subscriptionId}/resourceGroups/${metadata.resourceGroup}/providers/Microsoft.Storage/storageAccounts/${accountName}/blobServices/default/containers/${containerName}`;
+    return `https://portal.azure.com/#resource${resourceId}/users`;
+  }
+
+  function storageAccountContainersUrl(accountName) {
+    const metadata = accountMetadata[accountName];
+    if (!metadata) return storageAccountsBlade;
+    const resourceId = `/subscriptions/${metadata.subscriptionId}/resourceGroups/${metadata.resourceGroup}/providers/Microsoft.Storage/storageAccounts/${accountName}`;
+    return `https://portal.azure.com/#resource${resourceId}`;
+  }
+
   function markup(flow) {
     const id = flow.key;
+    const localDisabled = flow.policy && !licenseEligible;
     return `
       <h3>Backup destination</h3>
       <fieldset class="destination-choice">
         <legend>Destination type</legend>
-        <label class="destination-option selected" id="${id}-local-option"><input type="radio" name="${id}-destination" value="local" checked><span><b>Local storage</b><small>Use the SQL Server instance's default backup location.</small></span></label>
-        <label class="destination-option" id="${id}-blob-option"><input type="radio" name="${id}-destination" value="blob"><span><b>Azure Blob storage</b><small>Select or create a storage account and container.</small></span></label>
+        <label class="destination-option ${localDisabled ? 'disabled' : 'selected'}" id="${id}-local-option"><input type="radio" name="${id}-destination" value="local" ${localDisabled ? 'disabled' : 'checked'}><span><b>Local storage</b><small>${localDisabled ? `Unavailable for ${escapeHtml(licenseType)} license.` : 'Use the SQL Server instance\'s default backup location.'}</small></span></label>
+        <label class="destination-option ${localDisabled ? 'selected' : ''}" id="${id}-blob-option"><input type="radio" name="${id}-destination" value="blob" ${localDisabled ? 'checked' : ''}><span><b>Azure Blob storage</b><small>Select or create a storage account and container.</small></span></label>
       </fieldset>
+      ${localDisabled ? `<div class="banner license-info" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeHtml(licenseType)}</b><br><a class="link" href="${changeLicenseTypeUrl}" target="_top">Change license type</a></div></div>` : ''}
       <div id="${id}-local"><div class="field"><label>Backup location</label><div class="readonly"><b>Instance default backup location</b><br><span class="muted">Resolved from SQL Server when the backup runs.</span></div></div></div>
       <div class="blob-destination" id="${id}-blob" hidden>
-        <div class="banner"><i data-lucide="info" class="icon"></i><div>Managed-identity backup to Azure Blob storage is supported for <b>SQL Server 2025 or later on Windows</b>.</div></div>
         <div class="field"><label for="${id}-subscription">Subscription</label><select id="${id}-subscription"><option>Production subscription</option><option>Migration subscription</option></select></div>
-        <div class="field embedded-storage-field"><label for="${id}-account">Storage account <span aria-hidden="true">*</span></label><select id="${id}-account"><option value="sqlprodbackup01">sqlprodbackup01</option><option value="sqlmigrationwest">sqlmigrationwest</option><option value="__empty__">No storage accounts available</option></select><button class="resource-workflow-link" id="${id}-create-account" type="button">Create new</button><div class="inline-create-popover" id="${id}-account-form" role="dialog" hidden><h4>Create a new storage account</h4><div class="field"><label for="${id}-account-name">Name <span aria-hidden="true">*</span></label><input id="${id}-account-name" maxlength="24"></div><div class="field"><label for="${id}-account-region">Region</label><select id="${id}-account-region"><option>(US) West US 2</option><option>(US) East US 2</option></select></div><div class="inline-create-summary"><b>Storage (General Purpose V2)</b><br><span class="muted">Locally-redundant storage (LRS)</span></div><div class="inline-create-actions"><button class="button primary" id="${id}-save-account" type="button" disabled>Create</button><button class="button" id="${id}-cancel-account" type="button">Cancel</button></div></div></div>
-        <div class="field embedded-storage-field embedded-container-field"><label for="${id}-container">Container <span aria-hidden="true">*</span></label><select id="${id}-container"></select><button class="resource-workflow-link" id="${id}-create-container" type="button">Create new</button><div class="inline-create-popover" id="${id}-container-form" role="dialog" hidden><h4>Create a new container</h4><div class="field"><label for="${id}-container-name">Name <span aria-hidden="true">*</span></label><input id="${id}-container-name"></div><div class="inline-create-actions"><button class="button primary" id="${id}-save-container" type="button" disabled>Create</button><button class="button" id="${id}-cancel-container" type="button">Cancel</button></div></div></div>
+        <div class="field"><label for="${id}-resource-group">Resource group <span class="muted">(optional)</span></label><select id="${id}-resource-group"><option value="">All resource groups</option></select></div>
+        <div class="field embedded-storage-field"><label for="${id}-account">Storage account <span aria-hidden="true">*</span></label><select id="${id}-account"></select><a class="resource-workflow-link" id="${id}-create-account" href="${storageAccountsBlade}" target="_top">Create a storage account</a><div class="field-help"><span class="muted">Creating a storage account can take a few minutes and happens on the Storage accounts page. Create one there, then return and refresh this list.${storageContributorReady ? '' : ' Storage Account Contributor access is required to create one.'}</span>${storageContributorReady ? '' : ` <a href="${storageIamUrl}" target="_top">Open Access control (IAM)</a>`}</div></div>
+        <div class="field embedded-storage-field embedded-container-field"><label for="${id}-container">Container <span aria-hidden="true">*</span></label><select id="${id}-container"></select><a class="resource-workflow-link" id="${id}-create-container" href="${storageAccountsBlade}" target="_top">Create a container</a><div class="field-help"><span class="muted">Create a container from the selected storage account's Containers page, then return and refresh this list.</span></div></div>
+        <div class="banner blob-retention-info"><i data-lucide="archive" class="icon"></i><div><b>Manage retention in Azure Storage.</b><br><span>Configure lifecycle rules on the storage account to meet your retention requirements. <a href="${lifecycleLearnUrl}" target="_blank" rel="noreferrer">Learn more</a></span></div></div>
         <h3 class="embedded-section-title">Authentication</h3>
-        <div class="embedded-auth-grid"><div class="embedded-auth-label">Method</div><div class="embedded-auth-value">Managed identity (outbound)</div><div class="embedded-auth-label">Identity</div><div><div class="embedded-auth-identity"><span>${escapeHtml(principal)}</span><span class="muted">System assigned</span></div><div class="embedded-auth-note"><i data-lucide="info" class="icon"></i><span>SQL Server uses this Arc server identity to connect to Azure Blob storage.</span></div></div></div>
-        <div class="check embedded-identity-status"><i data-lucide="${primaryIdentityReady ? 'circle-check' : 'circle-x'}" class="icon ${primaryIdentityReady ? 'ok' : ''}"></i><div><b>${primaryIdentityReady ? 'Managed identity ready' : 'Managed identity setup required'}</b><br><span class="muted">${primaryIdentityReady ? 'Configured as this SQL Server instance\'s primary managed identity.' : 'Configure the Arc server identity as this SQL Server instance\'s primary managed identity.'}</span></div><a class="link" href="https://portal.azure.com" target="_blank" rel="noreferrer" ${primaryIdentityReady ? 'hidden' : ''}>Set up managed identity</a></div>
-        <div class="check embedded-access-status" id="${id}-access"><i data-lucide="loader-circle" class="icon"></i><div><b id="${id}-access-title">Validating access</b><br><span class="muted" id="${id}-access-message">Checking whether SQL Server can write to the selected container.</span></div><a class="link" id="${id}-iam" href="https://portal.azure.com" target="_blank" rel="noreferrer" hidden>Open container IAM</a></div>
+        <div class="embedded-auth-grid"><div class="embedded-auth-label">Method</div><div class="embedded-auth-value">Managed identity (outbound)</div>${primaryIdentityReady && managedIdentitySupported ? `<div class="embedded-auth-label">Identity</div><div><div class="embedded-auth-identity"><span>${escapeHtml(principal)}</span><span class="muted">System assigned</span></div><div class="embedded-auth-note"><i data-lucide="info" class="icon"></i><span>SQL Server uses this Arc server identity to connect to Azure Blob storage.</span></div></div>` : ''}</div>
+        <div class="check embedded-identity-status ${primaryIdentityReady && managedIdentitySupported ? '' : 'error'}" ${primaryIdentityReady && managedIdentitySupported ? '' : 'role="alert"'}><i data-lucide="${primaryIdentityReady && managedIdentitySupported ? 'circle-check' : 'circle-x'}" class="icon ${primaryIdentityReady && managedIdentitySupported ? 'ok' : ''}"></i><div><b>${!managedIdentitySupported ? 'Managed identity backup is not supported' : primaryIdentityReady ? 'Managed identity ready' : 'Primary managed identity is not configured'}</b><br><span class="muted">${!managedIdentitySupported ? 'Backup to Azure Blob storage with managed identity requires SQL Server 2025 or later on Windows.' : primaryIdentityReady ? 'Configured as this SQL Server instance\'s primary managed identity.' : 'A primary managed identity is required to back up to Azure Blob storage.'}</span></div><div class="identity-remediation-actions" ${primaryIdentityReady || !managedIdentitySupported ? 'hidden' : ''}><a class="link" href="${managedIdentitySettingsUrl}" target="_top">Configure managed identity</a><a class="link" href="https://learn.microsoft.com/sql/sql-server/azure-arc/microsoft-entra-authentication-with-managed-identity" target="_blank" rel="noreferrer">Learn more</a></div></div>
+        <div class="check embedded-access-status" id="${id}-access"><i data-lucide="loader-circle" class="icon"></i><div><b id="${id}-access-title">Validating role assignment</b><br><span class="muted" id="${id}-access-message">Checking for Storage Blob Data Contributor at the selected container or an inherited parent scope.</span></div><a class="link iam-remediation" id="${id}-iam-link" href="${storageIamUrl}" target="_top" hidden>Configure IAM role</a></div>
       </div>
       ${flow.key === 'backup' ? '<div class="banner error validation-error" id="backup-destination-error" role="alert"><i data-lucide="circle-x" class="icon"></i><div><b class="validation-title"></b><br><span class="validation-message"></span></div></div><div class="banner error submission-error" id="submission-error" role="alert"><i data-lucide="circle-x" class="icon"></i><div><b>The backup request could not be submitted.</b><br><span>The service returned a transient error. No backup was started.</span></div></div>' : ''}`;
   }
@@ -69,8 +101,13 @@
     if (flow.policy && authenticationSection?.querySelector('h3')?.textContent.trim() === 'Authentication') {
       authenticationSection.remove();
     }
+    const retentionSection = flow.policy && section.nextElementSibling?.querySelector('h3')?.textContent.trim() === 'Retention'
+      ? section.nextElementSibling
+      : null;
     section.innerHTML = markup(flow);
     const id = flow.key;
+    const subscription = document.getElementById(`${id}-subscription`);
+    const resourceGroup = document.getElementById(`${id}-resource-group`);
     const account = document.getElementById(`${id}-account`);
     const container = document.getElementById(`${id}-container`);
     let blobReady = false;
@@ -87,29 +124,33 @@
       action.disabled = action.dataset.pageBlocked === 'true' || destinationBlocked;
     }
 
+    function renderRetention() {
+      if (!retentionSection) return;
+      const blob = selectedType() === 'blob';
+      retentionSection.hidden = blob;
+      const retentionInput = retentionSection.querySelector('input[type="number"]');
+      const scheduleSection = [...section.parentElement.querySelectorAll('.section')]
+        .find(candidate => candidate.classList.contains('backup-schedule-section'));
+      const scheduleDisabled = !blob && Number(retentionInput?.value) === 0;
+      scheduleSection?.querySelectorAll('select').forEach(control => { control.disabled = scheduleDisabled; });
+      scheduleSection?.classList.toggle('schedule-disabled', scheduleDisabled);
+    }
+
     function validate() {
       const item = catalog[account.value]?.find(entry => entry.container === container.value);
       const hasAccess = Boolean(item?.access);
-      const stateContent = {
-        access: ['Storage data access is missing', `Grant Storage Blob Data Contributor to ${principal} on the selected container or a parent scope.`],
-        propagation: ['Role assignment is not effective yet', 'Role changes can take up to 10 minutes. Wait, then try again.'],
-        network: ['Azure Blob storage is unreachable', 'Check the storage firewall, private endpoint, DNS, and outbound HTTPS connectivity.'],
-        credential: ['Managed identity authentication could not be prepared', 'Verify the SQL Server primary managed identity configuration, then try again.'],
-        version: ['Azure Blob storage is unavailable for this SQL version', 'Managed-identity backup to Blob requires SQL Server 2025 or later on Windows.']
-      };
-      const simulatedFailure = stateContent[validationState];
       const accessDenied = validationState === 'access' || !hasAccess;
-      blobReady = primaryIdentityReady && !accessDenied && !simulatedFailure;
-      document.getElementById(`${id}-access-title`).textContent = simulatedFailure?.[0] || (hasAccess ? 'Authentication and access verified' : 'Storage data access is missing');
-      document.getElementById(`${id}-access-message`).textContent = simulatedFailure?.[1] || (hasAccess ? 'SQL Server can write to the selected container.' : `Grant Storage Blob Data Contributor to ${principal} on the selected container or a parent scope.`);
-      document.getElementById(`${id}-iam`).hidden = !primaryIdentityReady || !accessDenied || Boolean(simulatedFailure && validationState !== 'access');
+      const identityReady = primaryIdentityReady && managedIdentitySupported;
+      blobReady = identityReady && !accessDenied;
+      document.getElementById(`${id}-access-title`).textContent = !identityReady ? 'Role assignment validation pending' : hasAccess && !accessDenied ? 'Storage access role verified' : 'Storage access role not found';
+      document.getElementById(`${id}-access-message`).textContent = !identityReady ? 'Resolve the managed identity requirement before validating its role assignment.' : hasAccess && !accessDenied ? `${principal} has Storage Blob Data Contributor at the selected container or an inherited parent scope.` : `${principal} does not have Storage Blob Data Contributor at the selected container or an inherited parent scope.`;
       const status = document.getElementById(`${id}-access`);
-      status.hidden = !primaryIdentityReady;
       status.querySelector('.icon')?.remove();
-      status.insertAdjacentHTML('afterbegin', `<i data-lucide="${blobReady ? 'circle-check' : 'circle-x'}" class="icon ${blobReady ? 'ok' : ''}"></i>`);
-      if (flow.reviewDestinationId) {
-        document.getElementById(flow.reviewDestinationId).textContent = `${account.value} / ${container.value}`;
-      }
+      status.insertAdjacentHTML('afterbegin', `<i data-lucide="${!identityReady ? 'clock-3' : blobReady ? 'circle-check' : 'circle-x'}" class="icon ${blobReady ? 'ok' : ''}"></i>`);
+      const iamLink = document.getElementById(`${id}-iam-link`);
+      iamLink.href = containerIamUrl(account.value, container.value);
+      iamLink.hidden = !identityReady || !accessDenied;
+      renderRetention();
       syncAction();
       lucide.createIcons();
     }
@@ -119,8 +160,30 @@
       container.innerHTML = entries.length ? entries.map(item => `<option value="${item.container}">${item.container}</option>`).join('') : '<option value="">No containers available</option>';
       if (preferred && entries.some(item => item.container === preferred)) container.value = preferred;
       container.disabled = entries.length === 0;
-      document.getElementById(`${id}-create-container`).disabled = account.value === '__empty__';
+      const createContainerLink = document.getElementById(`${id}-create-container`);
+      createContainerLink.hidden = account.value === '__empty__';
+      createContainerLink.href = storageAccountContainersUrl(account.value);
       validate();
+    }
+
+    function renderAccounts(preferred) {
+      const names = Object.entries(accountMetadata)
+        .filter(([, metadata]) => metadata.subscription === subscription.value && (!resourceGroup.value || metadata.resourceGroup === resourceGroup.value))
+        .map(([name]) => name);
+      account.innerHTML = names.length
+        ? names.map(name => `<option value="${name}">${name}</option>`).join('')
+        : '<option value="">No storage accounts available</option>';
+      account.disabled = names.length === 0;
+      if (preferred && names.includes(preferred)) account.value = preferred;
+      renderContainers();
+    }
+
+    function renderResourceGroups(preferredAccount) {
+      const groups = [...new Set(Object.values(accountMetadata)
+        .filter(metadata => metadata.subscription === subscription.value)
+        .map(metadata => metadata.resourceGroup))].sort();
+      resourceGroup.innerHTML = '<option value="">All resource groups</option>' + groups.map(group => `<option value="${group}">${group}</option>`).join('');
+      renderAccounts(preferredAccount);
     }
 
     function syncType() {
@@ -129,58 +192,22 @@
       document.getElementById(`${id}-blob`).hidden = !blob;
       document.getElementById(`${id}-local-option`).classList.toggle('selected', !blob);
       document.getElementById(`${id}-blob-option`).classList.toggle('selected', blob);
-      if (flow.reviewDestinationId) {
-        document.getElementById(flow.reviewDestinationId).textContent = blob ? `${account.value} / ${container.value}` : 'Instance default backup location';
-      }
-      if (flow.reviewAuthenticationId) {
-        document.getElementById(flow.reviewAuthenticationId).textContent = blob ? `Managed identity · ${principal}` : 'Not required for local storage';
-      }
+      renderRetention();
       syncAction();
       lucide.createIcons();
     }
 
-    function showForm(name, show) {
-      [`${id}-account-form`, `${id}-container-form`].forEach(formId => {
-        if (formId !== name) document.getElementById(formId).hidden = true;
-      });
-      document.getElementById(name).hidden = !show;
-      if (show) document.getElementById(name).querySelector('input')?.focus();
-    }
-
     section.querySelectorAll(`input[name="${id}-destination"]`).forEach(input => input.addEventListener('change', syncType));
-    document.getElementById(`${id}-subscription`).addEventListener('change', event => { account.value = event.target.value === 'Migration subscription' ? 'sqlmigrationwest' : 'sqlprodbackup01'; renderContainers(); });
+    subscription.addEventListener('change', () => renderResourceGroups());
+    resourceGroup.addEventListener('change', () => renderAccounts());
     account.addEventListener('change', () => renderContainers());
     container.addEventListener('change', validate);
-    document.getElementById(`${id}-create-account`).addEventListener('click', () => showForm(`${id}-account-form`, true));
-    document.getElementById(`${id}-cancel-account`).addEventListener('click', () => showForm(`${id}-account-form`, false));
-    document.getElementById(`${id}-account-name`).addEventListener('input', event => { document.getElementById(`${id}-save-account`).disabled = !/^[a-z0-9]{3,24}$/.test(event.target.value.trim()); });
-    document.getElementById(`${id}-save-account`).addEventListener('click', () => {
-      const name = document.getElementById(`${id}-account-name`).value.trim();
-      if (!/^[a-z0-9]{3,24}$/.test(name)) return;
-      catalog[name] = [];
-      account.insertBefore(new Option(name, name), account.querySelector('[value="__empty__"]'));
-      account.value = name;
-      showForm(`${id}-account-form`, false);
-      renderContainers();
-      showForm(`${id}-container-form`, true);
-    });
-    document.getElementById(`${id}-create-container`).addEventListener('click', () => showForm(`${id}-container-form`, true));
-    document.getElementById(`${id}-cancel-container`).addEventListener('click', () => showForm(`${id}-container-form`, false));
-    document.getElementById(`${id}-container-name`).addEventListener('input', event => {
-      const name = event.target.value.trim();
-      document.getElementById(`${id}-save-container`).disabled = !/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(name) || name.includes('--');
-    });
-    document.getElementById(`${id}-save-container`).addEventListener('click', () => {
-      const name = document.getElementById(`${id}-container-name`).value.trim();
-      if (!/^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/.test(name) || name.includes('--')) return;
-      catalog[account.value] ||= [];
-      catalog[account.value].push({ container: name, access: false });
-      showForm(`${id}-container-form`, false);
-      renderContainers(name);
-    });
 
+    retentionSection?.querySelectorAll('input').forEach(input => input.addEventListener('input', renderRetention));
+
+    renderResourceGroups();
     renderContainers(flow.defaultContainer);
-    if (['access', 'propagation', 'network', 'credential', 'version'].includes(validationState)) {
+    if (['access', 'network', 'version'].includes(validationState) || (flow.policy && !licenseEligible)) {
       section.querySelector(`input[name="${id}-destination"][value="blob"]`).checked = true;
     }
     syncType();

@@ -36,6 +36,12 @@
   border: 2px solid var(--azure);
 }
 
+.destination-option.disabled {
+  color: #767676;
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
 .destination-option input {
   width: 18px;
   height: 18px;
@@ -74,14 +80,19 @@
   cursor: pointer;
 }
 
-.resource-workflow-link:disabled {
-  color: #767676;
-  cursor: not-allowed;
-}
-
 .embedded-storage-field {
   position: relative;
   max-width: 560px;
+}
+
+.field-help {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.field-help a {
+  color: var(--azure-dark);
 }
 
 .embedded-container-field {
@@ -99,40 +110,84 @@
   border-left: 1px solid #a19f9d;
 }
 
-.inline-create-popover {
-  position: absolute;
-  top: calc(100% - 4px);
-  left: min(200px, 32%);
-  z-index: 5;
-  width: min(360px, calc(100vw - 48px));
-  padding: 22px;
-  background: #fff;
-  border: 1px solid #e1dfdd;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 20%);
+.blob-retention-info a {
+  color: var(--azure-dark);
 }
 
-.inline-create-popover h4 {
-  margin: 0 0 18px;
-  font-size: 15px;
+.license-info,
+.blob-retention-info {
+  align-items: flex-start;
 }
 
-.inline-create-popover .field {
-  margin-bottom: 16px;
-}
-
-.inline-create-summary {
-  margin: 2px 0 22px;
-  padding-left: 8px;
-  border-left: 2px solid #bad80a;
-}
-
-.inline-create-actions {
+.schedule-label {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
 }
 
-.inline-create-popover[hidden] {
+.schedule-label label {
+  margin: 0;
+}
+
+.schedule-info {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: #323130;
+  background: transparent;
+  border: 0;
+}
+
+.schedule-info .icon {
+  width: 17px;
+  height: 17px;
+}
+
+.schedule-info::before,
+.schedule-info::after {
+  position: absolute;
+  z-index: 10;
   display: none;
+  pointer-events: none;
+}
+
+.schedule-info::before {
+  content: "";
+  top: 24px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  box-shadow: 2px 2px 3px rgb(0 0 0 / 8%);
+  transform: rotate(45deg);
+}
+
+.schedule-info::after {
+  content: attr(data-tooltip);
+  top: 30px;
+  left: -16px;
+  width: min(500px, calc(100vw - 64px));
+  padding: 16px 18px;
+  color: #242424;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(0 0 0 / 18%);
+  font-weight: 400;
+  text-align: left;
+}
+
+.schedule-info:hover::before,
+.schedule-info:hover::after,
+.schedule-info:focus::before,
+.schedule-info:focus::after {
+  display: block;
+}
+
+.schedule-disabled select {
+  opacity: .55;
 }
 
 .resource-empty-state {
@@ -200,8 +255,39 @@
   margin-top: 2px;
 }
 
+.embedded-identity-status.error {
+  border-left: 3px solid var(--red);
+  background: #fdf3f4;
+}
+
+.identity-remediation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.identity-remediation-actions[hidden] {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .embedded-identity-status {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+
+  .identity-remediation-actions {
+    grid-column: 2;
+  }
+}
+
 .embedded-role-note {
   margin: 8px 0 16px;
+}
+
+.iam-remediation {
+  align-self: center;
+  white-space: nowrap;
 }
 
 .workflow-status {
@@ -342,11 +428,5 @@
 
   .workflow-step {
     min-width: 118px;
-  }
-
-  .inline-create-popover {
-    position: fixed;
-    inset: auto 12px 12px;
-    width: auto;
   }
 }
