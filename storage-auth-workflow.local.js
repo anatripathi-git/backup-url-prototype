@@ -69,7 +69,7 @@
 
   function markup(flow) {
     const id = flow.key;
-    const localDisabled = flow.policy && !licenseEligible;
+    const localDisabled = !licenseEligible;
     return `
       <h3>Backup destination</h3>
       <fieldset class="destination-choice">
@@ -207,7 +207,7 @@
 
     renderResourceGroups();
     renderContainers(flow.defaultContainer);
-    if (['access', 'network', 'version'].includes(validationState) || (flow.policy && !licenseEligible)) {
+    if (['access', 'network', 'version'].includes(validationState) || !licenseEligible) {
       section.querySelector(`input[name="${id}-destination"][value="blob"]`).checked = true;
     }
     syncType();
