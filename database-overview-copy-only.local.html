@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>anatripathidb | Overview</title>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root { --azure:#0078d4; --azure-dark:#005a9e; --ink:#242424; --muted:#616161; --line:#d1d1d1; --selected:#e8e8e8; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; min-height:100%; color:var(--ink); background:#fff; font:14px/1.45 "Segoe UI",sans-serif; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    :focus-visible { outline:2px solid #000; outline-offset:2px; }
+    .icon { width:18px; height:18px; stroke-width:1.8; }
+    .topbar { height:48px; display:flex; align-items:center; gap:16px; padding:0 18px; color:#fff; background:#0078d4; }
+    .brand { font-size:16px; font-weight:600; }
+    .bug { padding:6px 14px; color:#242424; background:#f2a900; border:0; }
+    .search { width:min(560px,42vw); margin-left:auto; padding:7px 12px; border:0; border-radius:2px; }
+    .avatar { width:30px; height:30px; display:grid; place-items:center; color:#0f6cbd; background:#fff; border-radius:50%; font-weight:700; }
+    .breadcrumbs { padding:10px 20px 5px; color:var(--muted); font-size:12px; }
+    .resource-header { display:flex; align-items:center; gap:11px; padding:4px 20px 12px; border-bottom:1px solid var(--line); }
+    .resource-icon { width:25px; height:25px; color:var(--azure); }
+    h1 { margin:0; font-size:22px; font-weight:600; overflow-wrap:anywhere; }
+    .resource-type { color:var(--muted); font-size:12px; }
+    .shell { min-height:calc(100vh - 111px); display:grid; grid-template-columns:245px minmax(0,1fr); }
+    .menu { padding:12px 0; border-right:1px solid var(--line); }
+    .menu-filter { width:calc(100% - 24px); margin:0 12px 10px; padding:6px; border:1px solid #8a8886; }
+    .menu-item { width:100%; min-height:34px; display:flex; align-items:center; gap:9px; padding:6px 15px; color:inherit; background:transparent; border:0; border-left:3px solid transparent; text-align:left; }
+    .menu-item.active { background:var(--selected); border-left-color:var(--azure); font-weight:600; }
+    .menu-title { padding:13px 18px 4px; color:var(--muted); font-size:12px; font-weight:600; }
+    main { min-width:0; padding:0 20px 50px; }
+    .toolbar { display:flex; gap:5px; margin-bottom:12px; padding:7px 0; border-bottom:1px solid var(--line); }
+    .command { display:inline-flex; align-items:center; gap:7px; padding:7px 10px; color:var(--azure-dark); background:transparent; border:0; }
+    .facts { display:grid; grid-template-columns:1fr 1fr; gap:8px 80px; max-width:980px; padding-bottom:12px; border-bottom:1px solid var(--line); }
+    .fact { display:grid; grid-template-columns:130px minmax(0,1fr); gap:12px; }
+    .fact dt,.properties dt { color:var(--muted); }
+    .fact dd,.properties dd { margin:0; overflow-wrap:anywhere; }
+    .tab { width:max-content; margin-top:18px; padding:0 5px 7px; color:var(--azure-dark); border-bottom:2px solid var(--azure); font-weight:600; }
+    .property-grid { display:grid; grid-template-columns:1fr 1fr; gap:34px 90px; max-width:980px; margin-top:32px; }
+    .property-group { margin-bottom:32px; }
+    .property-group h2 { margin:0 0 13px; color:var(--azure-dark); font-size:14px; font-weight:600; }
+    .properties { display:grid; grid-template-columns:210px minmax(0,1fr); gap:8px 18px; margin:0; }
+    @media(max-width:800px) { .search,.bug { display:none; } .shell { grid-template-columns:1fr; } .menu { display:none; } .facts,.property-grid { grid-template-columns:1fr; gap:8px; } main { padding:0 14px 35px; } .resource-header,.breadcrumbs { padding-inline:14px; } }
+    @media(max-width:520px) { .topbar { padding-inline:12px; } .brand { font-size:14px; } .facts { gap:7px; } .fact,.properties { grid-template-columns:1fr; gap:2px; } .properties dd { margin-bottom:8px; } h1 { font-size:19px; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <i data-lucide="grip" class="icon"></i><i data-lucide="menu" class="icon"></i><span class="brand">Microsoft Azure (Preview)</span>
+    <button class="bug"><i data-lucide="bug" class="icon"></i> Report a bug</button>
+    <input class="search" aria-label="Search" value="Search resources, services, and docs (G+/)">
+    <i data-lucide="bell" class="icon"></i><i data-lucide="settings" class="icon"></i><span class="avatar">AT</span>
+  </header>
+  <div class="breadcrumbs">Home &nbsp;&gt;&nbsp; Favorite resources &nbsp;&gt;&nbsp; DESKTOP-L9OQT3B_MYFIRSTSQLSERVER &nbsp;|&nbsp; Backups (preview)</div>
+  <header class="resource-header">
+    <i data-lucide="database" class="resource-icon"></i>
+    <div><h1>anatripathidb (DESKTOP-L9OQT3B_MYFIRSTSQLSERVER/anatripathidb)</h1><div class="resource-type">SQL Server database</div></div>
+  </header>
+  <div class="shell">
+    <nav class="menu" aria-label="Database navigation">
+      <input class="menu-filter" placeholder="Search" aria-label="Search menu">
+      <button class="menu-item active"><i data-lucide="layout-dashboard" class="icon"></i>Overview</button>
+      <button class="menu-item"><i data-lucide="activity" class="icon"></i>Activity log</button>
+      <button class="menu-item"><i data-lucide="key-round" class="icon"></i>Access control (IAM)</button>
+      <button class="menu-item"><i data-lucide="stethoscope" class="icon"></i>Diagnose and solve problems</button>
+      <button class="menu-item"><i data-lucide="workflow" class="icon"></i>Resource visualizer</button>
+      <div class="menu-title">Data management</div>
+      <button class="menu-item"><i data-lucide="database-backup" class="icon"></i>Backups (preview)</button>
+      <div class="menu-title">Automation</div><div class="menu-title">Help</div>
+    </nav>
+    <main>
+      <div class="toolbar"><button class="command"><i data-lucide="refresh-cw" class="icon"></i>Refresh</button><button class="command"><i data-lucide="message-square" class="icon"></i>Feedback</button></div>
+      <dl class="facts">
+        <div class="fact"><dt>Resource group</dt><dd><a href="#">anatripathi-SQLArc</a></dd></div>
+        <div class="fact"><dt>SQL Server instance</dt><dd><a href="#">DESKTOP-L9OQT3B_MYFIRSTSQLSERVER</a></dd></div>
+        <div class="fact"><dt>Status</dt><dd>Online</dd></div>
+        <div class="fact"><dt>Location</dt><dd>East US</dd></div>
+        <div class="fact"><dt>Subscription</dt><dd><a href="#">AzureSQLPMDemos_adbadram</a></dd></div>
+        <div class="fact"><dt>Subscription ID</dt><dd>fa58cf66-caaf-4ba9-875d-f310d3694845</dd></div>
+        <div class="fact"><dt>Tags</dt><dd><a href="#">(edit)</a> &nbsp;&nbsp; <a href="#">Add tags</a></dd></div>
+      </dl>
+      <div class="tab">Properties</div>
+      <div class="property-grid">
+        <div>
+          <section class="property-group"><h2>Database</h2><dl class="properties"><dt>Name</dt><dd>anatripathidb</dd><dt>Date Created</dt><dd>11/5/2024, 01:09:00 UTC</dd><dt>Size</dt><dd>72 MB</dd><dt>Space Available</dt><dd>66.0625 MB</dd><dt>Read Only</dt><dd>No</dd><dt>Compatibility Level</dt><dd>160</dd></dl></section>
+          <section class="property-group"><h2>Backup</h2><dl class="properties"><dt>Recovery Mode</dt><dd>Full</dd><dt>Last Database Log Backup</dt><dd>2026-08-31T03:37:15Z</dd><dt>Last Database Backup</dt><dd>2026-08-30T18:07:24Z</dd><dt>Last Copy-only Backup</dt><dd>2026-08-31T20:14:09Z</dd></dl></section>
+          <section class="property-group"><h2>Maintenance</h2><dl class="properties"><dt>Collation</dt><dd>SQL_Latin1_General_CP1_CI_AS</dd></dl></section>
+        </div>
+        <div>
+          <section class="property-group"><h2>Automatic</h2><dl class="properties"><dt>Auto Close</dt><dd>No</dd><dt>Auto Shrink</dt><dd>No</dd><dt>Auto Create Statistics</dt><dd>Yes</dd><dt>Auto Update Statistics</dt><dd>Yes</dd></dl></section>
+          <section class="property-group"><h2>Miscellaneous</h2><dl class="properties"><dt>Encrypted</dt><dd>No</dd><dt>Trustworthy</dt><dd>No</dd><dt>Memory Optimization Available</dt><dd>Yes</dd></dl></section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>lucide.createIcons();</script>
+</body>
+</html>
