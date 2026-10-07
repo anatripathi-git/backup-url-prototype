@@ -74,7 +74,7 @@
       <h3>Backup destination</h3>
       <fieldset class="destination-choice">
         <legend>Destination type</legend>
-        <label class="destination-option ${localDisabled ? 'disabled' : 'selected'}" id="${id}-local-option"><input type="radio" name="${id}-destination" value="local" ${localDisabled ? 'disabled' : 'checked'}><span><b>Local storage</b><small>${localDisabled ? `Unavailable for ${escapeHtml(licenseType)} license.` : 'Use the SQL Server instance\'s default backup location.'}</small></span></label>
+        <label class="destination-option ${localDisabled ? 'disabled' : 'selected'}" id="${id}-local-option"><input type="radio" name="${id}-destination" value="local" ${localDisabled ? 'disabled' : 'checked'}><span><b>Local storage</b><small>${localDisabled ? `Unavailable with your current License Type: ${escapeHtml(licenseType)}` : 'Use the SQL Server instance\'s default backup location.'}</small></span></label>
         <label class="destination-option ${localDisabled ? 'selected' : ''}" id="${id}-blob-option"><input type="radio" name="${id}-destination" value="blob" ${localDisabled ? 'checked' : ''}><span><b>Azure Blob storage</b><small>Select or create a storage account and container.</small></span></label>
       </fieldset>
       ${localDisabled ? `<div class="banner license-info" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeHtml(licenseType)}</b><br><a class="link" href="${changeLicenseTypeUrl}" target="_top">Change license type</a></div></div>` : ''}
