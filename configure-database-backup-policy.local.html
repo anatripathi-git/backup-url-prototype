@@ -156,18 +156,19 @@
     const destinationParam=parameters.get('destination')==='blob'?'blob':'local';
     const statusLicenseType=parameters.get('license');
     const statusLicenseEligible=!statusLicenseType||['payg','paid'].includes(statusLicenseType.toLowerCase());
+    const bannerLayout=parameters.get('bannerLayout')==='split'?'split':'main';
     function renderStatusBanners(){
       const banners=[];
-      if(!statusLicenseEligible&&destinationParam!=='blob'){
+      if(bannerLayout==='main'&&!statusLicenseEligible&&destinationParam!=='blob'){
         banners.push(`<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeStatusHtml(statusLicenseType)}</b><br>Azure Blob storage remains available for any license type. <a href="https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceOverviewBlade" target="_top">Change license type</a></div></div>`);
       }
       if(policyParam==='none'){
-        banners.push(`<div class="banner warning" role="alert"><i data-lucide="calendar-x" class="icon"></i><div><b>No backup policy is configured for this database.</b><br>Configure a backup policy to enable scheduled automated backups. On-demand backups remain available. <button class="link-button" id="configure-policy-link" type="button">Configure database backup policies</button></div></div>`);
+        banners.push('<div class="banner warning" role="alert"><i data-lucide="calendar-x" class="icon"></i><div><b>This database has no backup policy set.</b><br>On-demand backups remain available. <button class="link-button" id="configure-policy-link" type="button">Configure database backup policies</button></div></div>');
       }else{
         banners.push('<div class="banner"><i data-lucide="info" class="icon"></i><div>This database is inheriting its automatic backup policy from the parent instance DESKTOP-L9OQT3B_MYFIRSTSQLSERVER.</div></div>');
       }
       if(recoveryModelParam==='simple'){
-        banners.push('<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>This database uses the SIMPLE recovery model.</b><br>Automated scheduled backups and point-in-time restore are only supported for the FULL recovery model; scheduled backups do not run for this database. On-demand copy-only backups remain available via Back up now. <a href="https://learn.microsoft.com/sql/relational-databases/backup-restore/recovery-models-sql-server" target="_blank" rel="noreferrer">Learn more about recovery models</a></div></div>');
+        banners.push('<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>The database is in simple recovery mode.</b><br>Currently Automated Backups and Point-in-time restore is only supported for Full recovery mode. On-demand copy-only backups remain available via Back up now. <a href="https://learn.microsoft.com/sql/relational-databases/backup-restore/recovery-models-sql-server" target="_blank" rel="noreferrer">Learn more about recovery models</a></div></div>');
       }
       document.getElementById('status-banners').innerHTML=banners.join('');
       document.getElementById('configure-policy-link')?.addEventListener('click',openPolicy);
