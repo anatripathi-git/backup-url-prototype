@@ -25,6 +25,7 @@
   const storageContributorReady = query.get('storageContributor') !== 'missing';
   const licenseType = query.get('license');
   const licenseEligible = !licenseType || ['payg', 'paid'].includes(licenseType.toLowerCase());
+  const bannerLayout = query.get('bannerLayout') === 'split' ? 'split' : 'main';
   const principal = document.querySelector('#picker-role-scope')?.closest('dl')?.querySelector('dd')?.textContent?.trim() || 'SQL Server resource';
   const managedIdentitySettingsUrl = 'https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceEntraSettingsBlade';
   const changeLicenseTypeUrl = 'https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceOverviewBlade';
@@ -77,7 +78,7 @@
         <label class="destination-option ${localDisabled ? 'disabled' : 'selected'}" id="${id}-local-option"><input type="radio" name="${id}-destination" value="local" ${localDisabled ? 'disabled' : 'checked'}><span><b>Local storage</b><small>${localDisabled ? `Unavailable with your current License Type: ${escapeHtml(licenseType)}` : 'Use the SQL Server instance\'s default backup location.'}</small></span></label>
         <label class="destination-option ${localDisabled ? 'selected' : ''}" id="${id}-blob-option"><input type="radio" name="${id}-destination" value="blob" ${localDisabled ? 'checked' : ''}><span><b>Azure Blob storage</b><small>Select or create a storage account and container.</small></span></label>
       </fieldset>
-      ${localDisabled ? `<div class="banner license-info" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeHtml(licenseType)}</b><br><a class="link" href="${changeLicenseTypeUrl}" target="_top">Change license type</a></div></div>` : ''}
+      ${localDisabled && bannerLayout === 'split' ? `<div class="banner license-info" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeHtml(licenseType)}</b><br><a class="link" href="${changeLicenseTypeUrl}" target="_top">Change license type</a></div></div>` : ''}
       <div id="${id}-local"><div class="field"><label>Backup location</label><div class="readonly"><b>Instance default backup location</b><br><span class="muted">Resolved from SQL Server when the backup runs.</span></div></div></div>
       <div class="blob-destination" id="${id}-blob" hidden>
         <div class="field"><label for="${id}-subscription">Subscription</label><select id="${id}-subscription"><option>Production subscription</option><option>Migration subscription</option></select></div>

@@ -201,13 +201,14 @@
     const destinationParam=statusParameters.get('destination')==='blob'?'blob':'local';
     const statusLicenseType=statusParameters.get('license');
     const statusLicenseEligible=!statusLicenseType||['payg','paid'].includes(statusLicenseType.toLowerCase());
+    const bannerLayout=statusParameters.get('bannerLayout')==='split'?'split':'main';
     function renderStatusBanners(){
       const banners=[];
-      if(!statusLicenseEligible&&destinationParam!=='blob'){
+      if(bannerLayout==='main'&&!statusLicenseEligible&&destinationParam!=='blob'){
         banners.push(`<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeStatusHtml(statusLicenseType)}</b><br>Azure Blob storage remains available for any license type. <a href="https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceOverviewBlade" target="_top">Change license type</a></div></div>`);
       }
       if(policyParam==='none'){
-        banners.push('<div class="banner warning" role="alert"><i data-lucide="calendar-x" class="icon"></i><div><b>No backup policy is configured for this instance.</b><br>Configure a backup policy to enable scheduled automated backups across eligible databases. On-demand backups remain available. <button class="link-button" id="configure-policy-link" type="button">Configure instance backup policies</button></div></div>');
+        banners.push('<div class="banner warning" role="alert"><i data-lucide="calendar-x" class="icon"></i><div><b>This instance has no backup policy set.</b><br>On-demand backups remain available for eligible databases. <button class="link-button" id="configure-policy-link" type="button">Configure instance backup policies</button></div></div>');
       }else{
         banners.push('<div class="banner"><i data-lucide="info" class="icon"></i><div>Instance level backup is scheduled. You can see the details here. <button class="command" style="padding:0">View Schedule</button></div></div>');
       }
