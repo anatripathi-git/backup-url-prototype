@@ -42,6 +42,12 @@
       <a href="09-no-backup-policy-configured.local.html"><strong>09 · No backup policy configured</strong><span>No scheduled policy exists for this database; on-demand backups remain available.</span></a>
       <a href="10-license-not-applicable-blob-destination.local.html"><strong>10 · License restriction not applicable (Blob destination)</strong><span>No license banner shown because the configured destination is already Azure Blob storage.</span></a>
     </div>
+    <h2>Banner layout comparison — Version A vs. Version B</h2>
+    <p>Same scenario (no policy + simple recovery + Free license), two placement options. Compare and decide which to keep.</p>
+    <div class="grid">
+      <a href="11-banner-layout-main-page.local.html"><strong>11 · Version A — All banners on main page</strong><span>Matches today's production pattern. All three conditions (license, policy, recovery model) shown as page-level banners above Automatic Backup Configuration.</span></a>
+      <a href="12-banner-layout-split.local.html"><strong>12 · Version B — Split placement</strong><span>Resource-level facts (no policy, simple recovery) stay on the main page; the destination-dependent license banner moves inline into the configuration pane, next to Destination type.</span></a>
+    </div>
   </main>
 </body>
 </html>
