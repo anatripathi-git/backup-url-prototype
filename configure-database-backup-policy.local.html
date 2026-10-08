@@ -30,6 +30,7 @@
     .command { display:inline-flex; align-items:center; gap:7px; padding:7px 10px; color:var(--azure-dark); background:transparent; border:0; }
     .banner { display:flex; gap:9px; margin:8px 0 18px; padding:10px; background:var(--soft); border-left:3px solid var(--azure); }
     .banner.error { background:var(--red-soft); border-left-color:var(--red); } .banner.warning { background:var(--yellow-soft); border-left-color:#d6a800; }
+    .link-button { padding:0; color:var(--azure-dark); background:none; border:0; font:inherit; text-decoration:underline; cursor:pointer; }
     .summary { display:grid; grid-template-columns:190px minmax(0,1fr); gap:9px 16px; max-width:620px; }
     .summary dt { color:var(--muted); } .summary dd { margin:0; }
     .drawer-backdrop { position:fixed; inset:48px 0 0; z-index:20; background:rgb(0 0 0 / 18%); } .drawer-backdrop.closed { display:none; }
@@ -80,9 +81,9 @@
       <div class="crumb">Home / DESKTOP-L9OQT3B_MYFIRSTSQLSERVER | Backups (preview) / anatripathidb</div>
       <div class="resource-head"><i data-lucide="database" class="resource-icon"></i><div><h1>anatripathidb (DESKTOP-L9OQT3B_MYFIRSTSQLSERVER/anatripathidb) | Backups (preview)</h1><div class="muted">SQL Server database</div></div></div>
       <div class="toolbar"><button class="command" id="open-policy"><i data-lucide="settings-2" class="icon"></i>Configure database backup policies (Preview)</button><button class="command" id="open-backup"><i data-lucide="database-backup" class="icon"></i>Back up now</button><button class="command"><i data-lucide="refresh-cw" class="icon"></i>Refresh</button><button class="command"><i data-lucide="message-square" class="icon"></i>Feedback</button></div>
-      <div class="banner"><i data-lucide="info" class="icon"></i><div>This database is inheriting its automatic backup policy from the parent instance DESKTOP-L9OQT3B_MYFIRSTSQLSERVER.</div></div>
+      <div id="status-banners"></div>
       <h2>Automatic Backup Configuration</h2>
-      <dl class="summary"><dt>Status</dt><dd>Enabled</dd><dt>Backup Policy Level</dt><dd>Inherited from instance</dd><dt>Retention Period</dt><dd>7 day(s)</dd><dt>Full Backup</dt><dd>7 day(s)</dd><dt>Differential Backup</dt><dd>12 hours</dd><dt>Transaction Log Backup</dt><dd>5 mins</dd></dl>
+      <dl class="summary"><dt>Status</dt><dd id="summary-status">Enabled</dd><dt>Backup Policy Level</dt><dd id="summary-policy-level">Inherited from instance</dd><dt>Destination</dt><dd id="summary-destination">Local storage</dd><dt>Retention Period</dt><dd id="summary-retention">7 day(s)</dd><dt>Full Backup</dt><dd id="summary-full">7 day(s)</dd><dt>Differential Backup</dt><dd id="summary-diff">12 hours</dd><dt>Transaction Log Backup</dt><dd id="summary-log">5 mins</dd></dl>
     </main>
   </div>
   <div class="drawer-backdrop closed" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
@@ -149,6 +150,43 @@
     document.getElementById('open-policy').addEventListener('click',openPolicy);document.getElementById('close').addEventListener('click',closePolicy);document.getElementById('cancel').addEventListener('click',closePolicy);document.getElementById('apply').addEventListener('click',closePolicy);document.getElementById('open-backup').addEventListener('click',openBackup);document.getElementById('close-backup').addEventListener('click',closeBackup);document.getElementById('cancel-backup').addEventListener('click',closeBackup);startBackup.addEventListener('click',()=>{if(previewState==='submit'){document.getElementById('submission-error').style.display='flex';return}closeBackup();const toast=document.getElementById('toast');toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),6000)});document.getElementById('select-policy-container').addEventListener('click',()=>openContainerPicker('policy'));document.getElementById('select-backup-container').addEventListener('click',()=>openContainerPicker('backup'));document.getElementById('picker-account').addEventListener('change',()=>{pendingContainer=null;renderContainers()});document.getElementById('picker-subscription').addEventListener('change',event=>{document.getElementById('picker-account').value=event.target.value==='Migration subscription'?'sqlmigrationwest':'sqlprodbackup01';pendingContainer=null;renderContainers()});document.getElementById('container-search').addEventListener('input',renderContainers);document.getElementById('confirm-container').addEventListener('click',confirmContainer);document.getElementById('close-picker').addEventListener('click',closeContainerPicker);document.getElementById('cancel-picker').addEventListener('click',closeContainerPicker);drawer.addEventListener('keydown',event=>{if(event.key==='Escape')closePolicy()});backupDrawer.addEventListener('keydown',event=>{if(event.key==='Escape'&&containerPicker.classList.contains('closed'))closeBackup()});containerPicker.addEventListener('keydown',event=>{if(event.key==='Escape')closeContainerPicker()});
     const retentionRange=document.getElementById('retention-range');const retentionValue=document.getElementById('retention-value');retentionRange.addEventListener('input',()=>{retentionValue.value=retentionRange.value});retentionValue.addEventListener('input',()=>{retentionRange.value=Math.min(35,Math.max(0,Number(retentionValue.value)||0))});
     const parameters=new URLSearchParams(window.location.search);previewState=parameters.get('state')||'ready';const view=parameters.get('view');if(view==='policy'){openPolicy()}else if(['basics','validation','review'].includes(view)){openBackup()}else if(previewState==='version'){openBackup()}
+    function escapeStatusHtml(value){const element=document.createElement('div');element.textContent=value;return element.innerHTML}
+    const recoveryModelParam=parameters.get('recoveryModel');
+    const policyParam=parameters.get('policy');
+    const destinationParam=parameters.get('destination')==='blob'?'blob':'local';
+    const statusLicenseType=parameters.get('license');
+    const statusLicenseEligible=!statusLicenseType||['payg','paid'].includes(statusLicenseType.toLowerCase());
+    function renderStatusBanners(){
+      const banners=[];
+      if(!statusLicenseEligible&&destinationParam!=='blob'){
+        banners.push(`<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeStatusHtml(statusLicenseType)}</b><br>Azure Blob storage remains available for any license type. <a href="https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceOverviewBlade" target="_top">Change license type</a></div></div>`);
+      }
+      if(policyParam==='none'){
+        banners.push(`<div class="banner warning" role="alert"><i data-lucide="calendar-x" class="icon"></i><div><b>No backup policy is configured for this database.</b><br>Configure a backup policy to enable scheduled automated backups. On-demand backups remain available. <button class="link-button" id="configure-policy-link" type="button">Configure database backup policies</button></div></div>`);
+      }else{
+        banners.push('<div class="banner"><i data-lucide="info" class="icon"></i><div>This database is inheriting its automatic backup policy from the parent instance DESKTOP-L9OQT3B_MYFIRSTSQLSERVER.</div></div>');
+      }
+      if(recoveryModelParam==='simple'){
+        banners.push('<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>This database uses the SIMPLE recovery model.</b><br>Automated scheduled backups and point-in-time restore are only supported for the FULL recovery model; scheduled backups do not run for this database. On-demand copy-only backups remain available via Back up now. <a href="https://learn.microsoft.com/sql/relational-databases/backup-restore/recovery-models-sql-server" target="_blank" rel="noreferrer">Learn more about recovery models</a></div></div>');
+      }
+      document.getElementById('status-banners').innerHTML=banners.join('');
+      document.getElementById('configure-policy-link')?.addEventListener('click',openPolicy);
+      lucide.createIcons();
+    }
+    function renderStatusSummary(){
+      document.getElementById('summary-destination').textContent=destinationParam==='blob'?'Azure Blob storage':'Local storage';
+      if(policyParam==='none'){
+        document.getElementById('summary-status').textContent='Disabled';
+        document.getElementById('summary-policy-level').textContent='Not configured';
+        document.getElementById('summary-destination').textContent='—';
+        document.getElementById('summary-retention').textContent='—';
+        document.getElementById('summary-full').textContent='—';
+        document.getElementById('summary-diff').textContent='—';
+        document.getElementById('summary-log').textContent='—';
+      }
+    }
+    renderStatusBanners();
+    renderStatusSummary();
   </script>
   <script src="storage-auth-workflow.local.js"></script>
 </body>
