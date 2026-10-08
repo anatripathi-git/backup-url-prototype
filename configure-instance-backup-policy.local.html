@@ -41,6 +41,8 @@
     .command { display:inline-flex; align-items:center; gap:7px; padding:7px 10px; color:var(--azure-dark); background:transparent; border:0; }
     .command:disabled { color:#999; cursor:not-allowed; }
     .banner { display:flex; align-items:flex-start; gap:10px; margin:14px 0; padding:11px 13px; background:var(--blue-soft); border-left:3px solid var(--azure); }
+    .banner.warning { background:#fff8e6; border-left-color:#d6a800; }
+    .link-button { padding:0; color:var(--azure-dark); background:none; border:0; font:inherit; text-decoration:underline; cursor:pointer; }
     .panel { background:var(--surface); border:1px solid var(--line); }
     .panel-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 15px; border-bottom:1px solid var(--line); }
     .filter { width:250px; padding:7px 9px; border:1px solid #8a8886; }
@@ -123,7 +125,7 @@
       <div class="crumb">Home / Azure Arc / SQL Server instances / PROD-SQL-01</div>
       <div class="resource-head"><div class="resource-icon"><i data-lucide="database" class="icon"></i></div><div><h1>PROD-SQL-01 | Backups (preview)</h1></div></div>
       <div class="toolbar"><button class="command" id="open-policy"><i data-lucide="settings-2" class="icon"></i>Configure instance backup policies (Preview)</button><button class="command"><i data-lucide="refresh-cw" class="icon"></i>Refresh</button><button class="command"><i data-lucide="message-square" class="icon"></i>Feedback</button></div>
-      <div class="banner"><i data-lucide="info" class="icon"></i><div>Instance level backup is scheduled. You can see the details here. <button class="command" style="padding:0">View Schedule</button></div></div>
+      <div id="status-banners"></div>
       <p class="muted">Backup availability is listed below for each database on this SQL Server enabled by Azure Arc. Manage your automated backups or restore a database here.</p>
       <div class="panel"><div class="panel-head"><h2 class="sr-only">Databases</h2><input class="filter" placeholder="Search for a database" aria-label="Search for a database"></div><div class="table-wrap"><table><thead><tr><th>Database</th><th>Earliest restore point (UTC)</th><th>Action</th></tr></thead><tbody><tr><td><b>SalesDB</b></td><td>12 Aug 2026, 10:26 UTC</td><td><button class="link">Restore</button></td></tr><tr><td><b>OrdersDB</b></td><td>12 Aug 2026, 10:19 UTC</td><td><button class="link">Restore</button></td></tr><tr><td><b>ArchiveDB</b></td><td>11 Aug 2026, 02:00 UTC</td><td><button class="link">Restore</button></td></tr></tbody></table></div></div>
     </main>
@@ -193,6 +195,28 @@
     document.getElementById('apply-policy').addEventListener('click', () => { document.getElementById('policy-status').textContent = 'Instance policy applied'; setTimeout(closePolicy, 500); });
     drawer.addEventListener('keydown', event => { if (event.key === 'Escape' && containerPicker.classList.contains('closed')) closePolicy(); });
     containerPicker.addEventListener('keydown', event => { if (event.key === 'Escape') closeContainerPicker(); });
+    function escapeStatusHtml(value){const element=document.createElement('div');element.textContent=value;return element.innerHTML}
+    const statusParameters=new URLSearchParams(window.location.search);
+    const policyParam=statusParameters.get('policy');
+    const destinationParam=statusParameters.get('destination')==='blob'?'blob':'local';
+    const statusLicenseType=statusParameters.get('license');
+    const statusLicenseEligible=!statusLicenseType||['payg','paid'].includes(statusLicenseType.toLowerCase());
+    function renderStatusBanners(){
+      const banners=[];
+      if(!statusLicenseEligible&&destinationParam!=='blob'){
+        banners.push(`<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeStatusHtml(statusLicenseType)}</b><br>Azure Blob storage remains available for any license type. <a href="https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceOverviewBlade" target="_top">Change license type</a></div></div>`);
+      }
+      if(policyParam==='none'){
+        banners.push('<div class="banner warning" role="alert"><i data-lucide="calendar-x" class="icon"></i><div><b>No backup policy is configured for this instance.</b><br>Configure a backup policy to enable scheduled automated backups across eligible databases. On-demand backups remain available. <button class="link-button" id="configure-policy-link" type="button">Configure instance backup policies</button></div></div>');
+      }else{
+        banners.push('<div class="banner"><i data-lucide="info" class="icon"></i><div>Instance level backup is scheduled. You can see the details here. <button class="command" style="padding:0">View Schedule</button></div></div>');
+      }
+      document.getElementById('status-banners').innerHTML=banners.join('');
+      document.getElementById('configure-policy-link')?.addEventListener('click',() => { loadPolicy(instancePolicy); openPolicy(); });
+      lucide.createIcons();
+    }
+    renderStatusBanners();
+    if (statusParameters.get('view') === 'policy') { loadPolicy(instancePolicy); openPolicy(); }
   </script>
   <script src="storage-auth-workflow.local.js"></script>
 </body>
