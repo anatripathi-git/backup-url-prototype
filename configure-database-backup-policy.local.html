@@ -90,6 +90,7 @@
     <aside class="drawer" tabindex="-1">
       <header class="drawer-head"><div><h2 id="drawer-title">Configure database backup policies</h2><div class="muted">SQL Server database</div></div><button class="close" id="close" aria-label="Close"><i data-lucide="x" class="icon"></i></button></header>
       <div class="drawer-body">
+        <div id="pane-status-banners"></div>
         <section class="section"><h3>Backup destination</h3><div class="field"><label>Storage container</label><div class="resource-selection"><div><b id="policy-container-name">scheduled</b><br><span class="muted" id="policy-account-name">Storage account · sqlprodbackup01</span><br><span class="muted" id="uri">https://sqlprodbackup01.blob.core.windows.net/scheduled</span></div><button class="button" id="select-policy-container" type="button"><i data-lucide="folder-search" class="icon"></i> Select storage container</button></div></div></section>
         <section class="section"><h3>Authentication</h3><div class="field"><label>Authentication</label><div class="readonly"><b>System-assigned managed identity</b><br><span class="muted">DESKTOP-L9OQT3B_MYFIRSTSQLSERVER · No secret is entered or stored.</span></div></div><div class="checks"><div class="check"><i data-lucide="circle-check" class="icon ok"></i><div><b>Managed identity ready</b><br><span class="muted">Configured as this SQL Server instance's primary managed identity.</span></div></div><div class="check"><i data-lucide="circle-check" class="icon ok"></i><div><b>Storage access role verified</b><br><span class="muted">DESKTOP-L9OQT3B_MYFIRSTSQLSERVER has Storage Blob Data Contributor for the selected destination.</span></div></div></div></section>
         <section class="section"><h3>Retention</h3><div class="field"><label for="retention-range">Retention period (days)</label><p class="muted retention-help">How many days would you like PITR backups to be kept?</p><div class="range-row"><input id="retention-range" type="range" min="0" max="35" value="7"><input id="retention-value" type="number" min="0" max="35" value="7" aria-label="Retention period in days"></div></div></section>
@@ -156,22 +157,22 @@
     const destinationParam=parameters.get('destination')==='blob'?'blob':'local';
     const statusLicenseType=parameters.get('license');
     const statusLicenseEligible=!statusLicenseType||['payg','paid'].includes(statusLicenseType.toLowerCase());
-    const bannerLayout=parameters.get('bannerLayout')==='split'?'split':'main';
+    const bannerPlacement=parameters.get('bannerPlacement')==='pane'?'pane':'main';
     function renderStatusBanners(){
-      const banners=[];
-      if(bannerLayout==='main'&&!statusLicenseEligible&&destinationParam!=='blob'){
-        banners.push(`<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>Backup to Local storage is not available with your current License Type: ${escapeStatusHtml(statusLicenseType)}</b><br>Azure Blob storage remains available for any license type. <a href="https://portal.azure.com/#view/Microsoft_Azure_ArcCenterUX/SqlServerInstanceOverviewBlade" target="_top">Change license type</a></div></div>`);
-      }
+      const mainBanners=[];
+      const paneBanners=[];
+      const noPolicyBanner='<div class="banner"><i data-lucide="info" class="icon"></i><div>This database has no backup policy set.</div></div>';
+      const simpleRecoveryBanner='<div class="banner"><i data-lucide="info" class="icon"></i><div>The database is in simple recovery mode. Currently Automated Backups and Point-in-time restore is only supported for Full recovery mode.</div></div>';
       if(policyParam==='none'){
-        banners.push('<div class="banner warning" role="alert"><i data-lucide="calendar-x" class="icon"></i><div><b>This database has no backup policy set.</b><br>On-demand backups remain available. <button class="link-button" id="configure-policy-link" type="button">Configure database backup policies</button></div></div>');
+        (bannerPlacement==='pane'?paneBanners:mainBanners).push(noPolicyBanner);
       }else{
-        banners.push('<div class="banner"><i data-lucide="info" class="icon"></i><div>This database is inheriting its automatic backup policy from the parent instance DESKTOP-L9OQT3B_MYFIRSTSQLSERVER.</div></div>');
+        mainBanners.push('<div class="banner"><i data-lucide="info" class="icon"></i><div>This database is inheriting its automatic backup policy from the parent instance DESKTOP-L9OQT3B_MYFIRSTSQLSERVER.</div></div>');
       }
       if(recoveryModelParam==='simple'){
-        banners.push('<div class="banner warning" role="alert"><i data-lucide="triangle-alert" class="icon"></i><div><b>The database is in simple recovery mode.</b><br>Currently Automated Backups and Point-in-time restore is only supported for Full recovery mode. On-demand copy-only backups remain available via Back up now. <a href="https://learn.microsoft.com/sql/relational-databases/backup-restore/recovery-models-sql-server" target="_blank" rel="noreferrer">Learn more about recovery models</a></div></div>');
+        (bannerPlacement==='pane'?paneBanners:mainBanners).push(simpleRecoveryBanner);
       }
-      document.getElementById('status-banners').innerHTML=banners.join('');
-      document.getElementById('configure-policy-link')?.addEventListener('click',openPolicy);
+      document.getElementById('status-banners').innerHTML=mainBanners.join('');
+      document.getElementById('pane-status-banners').innerHTML=paneBanners.join('');
       lucide.createIcons();
     }
     function renderStatusSummary(){
